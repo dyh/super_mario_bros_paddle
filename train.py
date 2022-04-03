@@ -111,16 +111,34 @@ def train():
         train_reward = 0
         for _ in range(num_local_steps):
             states.append(curr_states)
+
             logits, value = model(curr_states)
-            values.append(value.squeeze())
+
+            if value.shape == [1, 1]:
+                values.append(value[0])
+            else:
+                values.append(value.squeeze())
+            pass
+
             policy = F.softmax(logits, axis=-1)
 
             old_m = Categorical(policy)
 
-            action = old_m.sample([1]).squeeze()
+            # action = old_m.sample([1])  # 采样
+            # action = old_m.sample([1]).squeeze()
+
+            action = old_m.sample([1])
+
+            if action.shape == [1, 1]:
+                action = action[0]
+            else:
+                action = action.squeeze()
+            pass
 
             actions.append(action)
+
             origin_old_log_policy = old_m.log_prob(action)
+
             # eye = paddle.eye(policy.shape[0])
             # old_log_policy = paddle.sum(paddle.multiply(origin_old_log_policy, eye), axis=1).squeeze()
 
@@ -151,7 +169,13 @@ def train():
                               step=curr_episode)
 
         _, next_value, = model(curr_states)
-        next_value = next_value.squeeze()
+
+        if next_value.shape == [1, 1]:
+            next_value = next_value[0]
+        else:
+            next_value = next_value.squeeze()
+        pass
+
         old_log_policies = paddle.concat(old_log_policies, axis=-1).detach()
         actions = paddle.concat(actions).squeeze()
         values = paddle.concat(values).squeeze().detach()
@@ -159,8 +183,7 @@ def train():
         gae = paddle.to_tensor([0.])
         R = []
 
-        '''PG 优势函数计算过程
-        '''
+        '''PG 优势函数计算过程'''
         for value, reward, done in list(zip(values, rewards, dones))[::-1]:
             gae = gae * gamma * tau
             gae = gae + reward + gamma * next_value.detach() * (1.0 - done) - value.detach()
