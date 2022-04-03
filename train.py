@@ -246,8 +246,7 @@ def train():
         if not str(total_loss.numpy().item()) == "nan":
             log_writer.add_scalar("Total loss", value=total_loss, step=curr_episode)
 
-            wandb.log({"loss": total_loss})
-
+            wandb.log({"loss": total_loss.__float__()})
         else:
             continue
 
@@ -272,8 +271,8 @@ saved_path = "./models"
 world = 1  # 世界
 stage = 1  # 关卡
 action_type = "simple"  # 操作模式
-num_processes = 8  # 线程数
-# num_processes = 1  # 线程数
+# num_processes = 8  # 线程数
+num_processes = 1  # 线程数
 lr = float(1e-4)  # 学习率
 
 if __name__ == "__main__":
