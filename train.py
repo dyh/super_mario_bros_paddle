@@ -9,6 +9,7 @@ import wandb
 wandb.init(project="paddle_mario", entity="dyh37")
 
 import os
+from time import time
 
 from game_env import MultipleEnvironments
 from game_env import create_train_env
@@ -45,6 +46,10 @@ def eval(local_model, log_writer, eval_epch):
     total_reward = 0
     max_reward = 0
     actions = deque(maxlen=max_actions)
+
+    # 累计通关10次就认为成功，退出程序
+    FINISHED_TIMES = 0
+
     while True:
         curr_step += 1
         logits, value = local_model(state)
@@ -59,6 +64,13 @@ def eval(local_model, log_writer, eval_epch):
             print("Finished")
             paddle.save(local_model.state_dict(),
                         "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
+
+            # 累计通关10次就认为成功，退出程序
+            FINISHED_TIMES += 1
+            if FINISHED_TIMES > 9:
+                done = True
+            pass
+        pass
 
         # aistudio 下无法显示
         # env.render()
@@ -276,7 +288,16 @@ num_processes = 8  # 线程数
 lr = float(1e-4)  # 学习率
 
 if __name__ == "__main__":
+    # 程序运行耗时
+    t_start_all = time.time()
+
     paddle.seed(314)
     print("Proximal Policy Optimization Algorithms (PPO) playing Super Mario Bros")
     print("Training Processes:{}".format(num_processes))
     train()
+
+    # 程序运行耗时
+    t_stop_all = time.time()
+    # 累计10次通关，总耗时
+    TIME_CONSUMING_ALL = t_stop_all - t_start_all
+    print('TIME_CONSUMING_ALL', str(TIME_CONSUMING_ALL), 'seconds')
