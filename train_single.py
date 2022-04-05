@@ -131,9 +131,6 @@ def train():
 
             old_m = Categorical(policy)
 
-            # action = old_m.sample([1])  # 采样
-            # action = old_m.sample([1]).squeeze()
-
             action = old_m.sample([1])
 
             if action.shape == [1, 1]:
@@ -145,9 +142,6 @@ def train():
             actions.append(action)
 
             origin_old_log_policy = old_m.log_prob(action)
-
-            # eye = paddle.eye(policy.shape[0])
-            # old_log_policy = paddle.sum(paddle.multiply(origin_old_log_policy, eye), axis=1).squeeze()
 
             old_log_policy = paddle.tensor.tril(origin_old_log_policy)
             old_log_policy = paddle.tensor.triu(old_log_policy)
@@ -200,11 +194,11 @@ def train():
 
         for i in trange(num_epochs):
             model.train()
-            indice = paddle.randperm(num_local_steps * num_processes)  # 返回一个 0 到 n-1 的数组
+            indice = paddle.randperm(num_local_steps)  # 返回一个 0 到 n-1 的数组
             for j in range(batch_size):
                 batch_indices = indice[
-                                int(j * (num_local_steps * num_processes / batch_size)): int((j + 1) * (
-                                        num_local_steps * num_processes / batch_size))]
+                                int(j * (num_local_steps / batch_size)): int((j + 1) * (
+                                        num_local_steps / batch_size))]
 
                 batch_advantages = paddle.gather(advantages, batch_indices, axis=0)
                 batch_R = paddle.gather(R, batch_indices, axis=0)
@@ -251,8 +245,7 @@ def train():
             continue
 
 
-'''不需要调整的全局变量
-'''
+'''不需要调整的全局变量'''
 gamma = 0.9  # 奖励的折算因子
 tau = 1.0  # GAE(Generalized Advantage Estimation), 即优势函数的参数
 beta = 0.01  # 交叉熵的系数
@@ -266,13 +259,10 @@ max_actions = 512
 log_path = "./log"  # 日志保存路径
 saved_path = "./models"
 
-'''可以调整的全局变量
-'''
+'''可以调整的全局变量'''
 world = 1  # 世界
 stage = 1  # 关卡
 action_type = "simple"  # 操作模式
-num_processes = 8  # 线程数
-# num_processes = 1  # 线程数
 lr = float(1e-4)  # 学习率
 
 if __name__ == "__main__":
@@ -281,7 +271,6 @@ if __name__ == "__main__":
 
     paddle.seed(314)
     print("Proximal Policy Optimization Algorithms (PPO) playing Super Mario Bros")
-    print("Training Processes:{}".format(num_processes))
     train()
 
     # 程序运行耗时
