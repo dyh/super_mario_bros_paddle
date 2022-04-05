@@ -20,7 +20,9 @@ class Monitor:
             self.pipe = sp.Popen(self.command, stdin=sp.PIPE, stderr=sp.PIPE)
         except FileNotFoundError:
             pass
+
     '''记录'''
+
     def record(self, image_array):
         self.pipe.stdin.write(image_array.tostring())
 
@@ -137,3 +139,28 @@ class MultipleEnvironments:
                 self.env_conns[index].send(self.envs[index].reset())
             else:
                 raise NotImplementedError
+
+
+class Environment:
+    def __init__(self, world, stage, action_type, output_path=None):
+        if action_type == "right":
+            actions = RIGHT_ONLY
+        elif action_type == "simple":
+            actions = SIMPLE_MOVEMENT
+        else:
+            actions = COMPLEX_MOVEMENT
+
+        self.env = create_train_env(world, stage, actions, output_path=output_path)
+        self.num_states = self.env.observation_space.shape[0]
+        self.num_actions = len(actions)
+
+        pass
+
+    # def run(self, request, action):
+    #     if request == "step":
+    #         self.env.step(action)
+    #     elif request == "reset":
+    #         self.env.reset()
+    #     else:
+    #         raise NotImplementedError
+    #     pass

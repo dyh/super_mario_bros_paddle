@@ -1,24 +1,12 @@
 import os
-# 安装环境
-# os.system("pip install gym-super-mario-bros")
-# os.system("pip install gym")
-# os.system("clear")
-os.environ['OMP_NUM_THREADS'] = '1'
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-# import wandb
-# wandb.init(project="paddle_mario", entity="dyh37")
-
-from time import time
-
-from game_env import MultipleEnvironments
+from game_env import Environment
 from game_env import create_train_env
 from model import MARIO
 
 import paddle
 from paddle.distribution import Categorical
 import paddle.nn.functional as F
-import multiprocessing as _mp
 import numpy as np
 import shutil
 from visualdl import LogWriter
@@ -39,6 +27,7 @@ def eval(local_model, log_writer, eval_epch):
         actions = COMPLEX_MOVEMENT
 
     env = create_train_env(world, stage, actions)
+
     state = paddle.to_tensor(env.reset(), dtype="float32")
 
     curr_step = 0
@@ -97,15 +86,18 @@ def train():
     if not os.path.isdir(saved_path):
         os.makedirs(saved_path)
 
-    envs = MultipleEnvironments(world, stage, action_type, num_processes)
+    # envs = MultipleEnvironments(world, stage, action_type, num_processes)
+
+    envs = Environment(world, stage, action_type)
+
     model = MARIO(envs.num_states, envs.num_actions)
 
     clip_grad = paddle.nn.ClipGradByNorm(clip_norm=0.5)
     optimizer = paddle.optimizer.Adam(learning_rate=lr, parameters=model.parameters(), grad_clip=clip_grad)
     log_writer = LogWriter(logdir=log_path, comment="Super Mario Bros")
 
-    [agent_conn.send(("reset", None)) for agent_conn in envs.agent_conns]  # 重置环境
-    curr_states = [agent_conn.recv() for agent_conn in envs.agent_conns]  # 返回图像序列
+    curr_states = [envs.env.reset()]
+
     curr_states = paddle.to_tensor(np.concatenate(curr_states, 0), dtype="float32")
 
     curr_episode = 0
@@ -163,14 +155,11 @@ def train():
 
             old_log_policies.append(old_log_policy)
 
-            [agent_conn.send(("step", act)) for agent_conn, act in
-             zip(envs.agent_conns, action.numpy().astype("int16").tolist())]
-            state, reward, done, info = zip(*[agent_conn.recv() for agent_conn in envs.agent_conns])
+            state, reward, done, info = envs.env.step(int(action))
 
-            # for _ in range(len(info)):
-            #     if info[_]["flag_get"]:
-            #         print("Thread_{} Finished".format(_))
             train_reward += np.mean(reward)
+
+            state = [state]
 
             state = paddle.to_tensor(np.concatenate(state, 0), dtype="float32")
             reward = paddle.to_tensor(reward, dtype="float32")
@@ -258,7 +247,6 @@ def train():
         if not str(total_loss.numpy().item()) == "nan":
             log_writer.add_scalar("Total loss", value=total_loss, step=curr_episode)
 
-            # wandb.log({"loss": total_loss.__float__()})
         else:
             continue
 
@@ -283,8 +271,8 @@ saved_path = "./models"
 world = 1  # 世界
 stage = 1  # 关卡
 action_type = "simple"  # 操作模式
-# num_processes = 8  # 线程数
-num_processes = 1  # 线程数
+num_processes = 8  # 线程数
+# num_processes = 1  # 线程数
 lr = float(1e-4)  # 学习率
 
 if __name__ == "__main__":

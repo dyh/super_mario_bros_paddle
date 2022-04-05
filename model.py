@@ -3,8 +3,6 @@ import paddle.nn as nn
 import paddle.nn.functional as F
 from paddle.nn import Conv2D, ReLU, Linear, Layer
 
-import math
-
 
 def conv_out(In):
     return (In - 3 + 2 * 1) // 2 + 1
