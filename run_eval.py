@@ -203,7 +203,7 @@ def main(world, stage):
         env.render()
         if done:
             break
-        time.sleep(0.05)
+        time.sleep(0.04)
     pass
 
 
