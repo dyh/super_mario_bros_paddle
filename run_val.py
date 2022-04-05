@@ -1,3 +1,11 @@
+"""
+项目作者 王子瑞
+文章地址 https://blog.csdn.net/wzduang/article/details/113093206
+项目代码 https://github.com/Wongziseoi/PaddleMario
+"""
+
+import time
+
 import paddle
 import paddle.nn.functional as F
 from paddle.nn import Conv2D, ReLU, Linear, Layer
@@ -176,9 +184,11 @@ class MARIO(Layer):
 def main(world, stage):
     actions = SIMPLE_MOVEMENT
     obs_dim = [1, 4, 84, 84]
-    env = create_train_env(world, stage, actions, "./video/mario_{}_{}.avi".format(world, stage))
+    # env = create_train_env(world, stage, actions, "./video/mario_{}_{}.avi".format(world, stage))
+    env = create_train_env(world, stage, actions)
     paddle.disable_static()
     params = paddle.load('./models/mario_{}_{}.pdparams'.format(world, stage))
+
     model = MARIO(len(actions), obs_dim)
     model.set_dict(params)
     model.eval()
@@ -190,12 +200,14 @@ def main(world, stage):
         action = np.argmax(policy)
         state, reward, done, info = env.step(action)
         state = np.array(state).astype('float32')
-        # env.render()
+        env.render()
         if done:
             break
+        time.sleep(0.05)
+    pass
 
 
-world = 1
-stage = 1
 if __name__ == '__main__':
+    world = 1
+    stage = 1
     main(world, stage)

@@ -1,15 +1,13 @@
+"""
+项目作者 王子瑞
+文章地址 https://blog.csdn.net/wzduang/article/details/113093206
+项目代码 https://github.com/Wongziseoi/PaddleMario
+"""
+
 import os
-# 安装环境
-# os.system("pip install gym-super-mario-bros")
-# os.system("pip install gym")
-# os.system("clear")
+
 os.environ['OMP_NUM_THREADS'] = '1'
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-
-# import wandb
-# wandb.init(project="paddle_mario", entity="dyh37")
-
-from time import time
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 from game_env import MultipleEnvironments
 from game_env import create_train_env
@@ -18,19 +16,17 @@ from model import MARIO
 import paddle
 from paddle.distribution import Categorical
 import paddle.nn.functional as F
-import multiprocessing as _mp
 import numpy as np
 import shutil
 from visualdl import LogWriter
 
 from collections import deque
 from gym_super_mario_bros.actions import SIMPLE_MOVEMENT, COMPLEX_MOVEMENT, RIGHT_ONLY
-import time
 from tqdm import trange
 
 
 def eval(local_model, log_writer, eval_epch):
-    """选择操作模式"""
+    # 选择操作模式
     if action_type == "right":
         actions = RIGHT_ONLY
     elif action_type == "simple":
@@ -42,13 +38,8 @@ def eval(local_model, log_writer, eval_epch):
     state = paddle.to_tensor(env.reset(), dtype="float32")
 
     curr_step = 0
-    max_step = int(1e9)
     total_reward = 0
-    max_reward = 0
     actions = deque(maxlen=max_actions)
-
-    # 累计通关10次就认为成功，退出程序
-    FINISHED_TIMES = 0
 
     while True:
         curr_step += 1
@@ -59,20 +50,12 @@ def eval(local_model, log_writer, eval_epch):
 
         total_reward += reward
 
-        '''通关时保存模型'''
+        # 通关时保存模型
         if info["flag_get"]:
             print("Finished")
             paddle.save(local_model.state_dict(),
                         "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
 
-            # 累计通关10次就认为成功，退出程序
-            FINISHED_TIMES += 1
-            if FINISHED_TIMES > 9:
-                done = True
-            pass
-        pass
-
-        # aistudio 下无法显示
         # env.render()
         actions.append(action)
         if curr_step > num_global_steps or actions.count(actions[0]) == actions.maxlen:
@@ -111,7 +94,7 @@ def train():
     curr_episode = 0
     eval_epch = 0
     while True:
-        """定期保存模型"""
+        # 定期保存模型
         if curr_episode % save_interval == 0 and curr_episode > 0:
             paddle.save(model.state_dict(),
                         "{}/mario_{}_{}_{}.pdparams".format(saved_path, world, stage, curr_episode))
@@ -122,7 +105,7 @@ def train():
         states = []
         rewards = []
         dones = []
-        """预热部分"""
+        # 预热部分
         train_reward = 0
         for _ in range(num_local_steps):
             states.append(curr_states)
@@ -139,9 +122,6 @@ def train():
 
             old_m = Categorical(policy)
 
-            # action = old_m.sample([1])  # 采样
-            # action = old_m.sample([1]).squeeze()
-
             action = old_m.sample([1])
 
             if action.shape == [1, 1]:
@@ -154,9 +134,6 @@ def train():
 
             origin_old_log_policy = old_m.log_prob(action)
 
-            # eye = paddle.eye(policy.shape[0])
-            # old_log_policy = paddle.sum(paddle.multiply(origin_old_log_policy, eye), axis=1).squeeze()
-
             old_log_policy = paddle.tensor.tril(origin_old_log_policy)
             old_log_policy = paddle.tensor.triu(old_log_policy)
             old_log_policy = paddle.sum(old_log_policy, axis=1)
@@ -167,9 +144,6 @@ def train():
              zip(envs.agent_conns, action.numpy().astype("int16").tolist())]
             state, reward, done, info = zip(*[agent_conn.recv() for agent_conn in envs.agent_conns])
 
-            # for _ in range(len(info)):
-            #     if info[_]["flag_get"]:
-            #         print("Thread_{} Finished".format(_))
             train_reward += np.mean(reward)
 
             state = paddle.to_tensor(np.concatenate(state, 0), dtype="float32")
@@ -198,7 +172,7 @@ def train():
         gae = paddle.to_tensor([0.])
         R = []
 
-        '''PG 优势函数计算过程'''
+        # PG 优势函数计算过程# 
         for value, reward, done in list(zip(values, rewards, dones))[::-1]:
             gae = gae * gamma * tau
             gae = gae + reward + gamma * next_value.detach() * (1.0 - done) - value.detach()
@@ -263,41 +237,30 @@ def train():
             continue
 
 
-'''不需要调整的全局变量
-'''
-gamma = 0.9  # 奖励的折算因子
-tau = 1.0  # GAE(Generalized Advantage Estimation), 即优势函数的参数
-beta = 0.01  # 交叉熵的系数
-epsilon = 0.2  # 裁剪后的替代目标函数(PPO 提出)的参数
-batch_size = 16
-num_epochs = 10
-num_local_steps = 512
-num_global_steps = int(5e6)
-save_interval = 50  # 定期保存间隔
-max_actions = 512
-log_path = "./log"  # 日志保存路径
-saved_path = "./models"
-
-'''可以调整的全局变量
-'''
-world = 1  # 世界
-stage = 1  # 关卡
-action_type = "simple"  # 操作模式
-# num_processes = 8  # 线程数
-num_processes = 1  # 线程数
-lr = float(1e-4)  # 学习率
-
 if __name__ == "__main__":
-    # 程序运行耗时
-    t_start_all = time.time()
+    # 不需要调整的全局变量
+    gamma = 0.9  # 奖励的折算因子
+    tau = 1.0  # GAE(Generalized Advantage Estimation), 即优势函数的参数
+    beta = 0.01  # 交叉熵的系数
+    epsilon = 0.2  # 裁剪后的替代目标函数(PPO 提出)的参数
+    batch_size = 16
+    num_epochs = 10
+    num_local_steps = 512
+    num_global_steps = int(5e6)
+    save_interval = 50  # 定期保存间隔
+    max_actions = 512
+    log_path = "./log"  # 日志保存路径
+    saved_path = "./models"
+
+    # 可以调整的全局变量
+    world = 1  # 世界
+    stage = 1  # 关卡
+    action_type = "simple"  # 操作模式
+    # num_processes = 8  # 线程数
+    num_processes = 1  # 线程数
+    lr = float(1e-4)  # 学习率
 
     paddle.seed(314)
     print("Proximal Policy Optimization Algorithms (PPO) playing Super Mario Bros")
     print("Training Processes:{}".format(num_processes))
     train()
-
-    # 程序运行耗时
-    t_stop_all = time.time()
-    # 累计10次通关，总耗时
-    TIME_CONSUMING_ALL = t_stop_all - t_start_all
-    print('TIME_CONSUMING_ALL', str(TIME_CONSUMING_ALL), 'seconds')

@@ -1,3 +1,9 @@
+"""
+项目作者 王子瑞
+文章地址 https://blog.csdn.net/wzduang/article/details/113093206
+项目代码 https://github.com/Wongziseoi/PaddleMario
+"""
+
 import os
 
 from game_env import Environment
@@ -13,12 +19,11 @@ from visualdl import LogWriter
 
 from collections import deque
 from gym_super_mario_bros.actions import SIMPLE_MOVEMENT, COMPLEX_MOVEMENT, RIGHT_ONLY
-import time
 from tqdm import trange
 
 
 def eval(local_model, log_writer, eval_epch):
-    """选择操作模式"""
+    # 选择操作模式
     if action_type == "right":
         actions = RIGHT_ONLY
     elif action_type == "simple":
@@ -31,13 +36,8 @@ def eval(local_model, log_writer, eval_epch):
     state = paddle.to_tensor(env.reset(), dtype="float32")
 
     curr_step = 0
-    max_step = int(1e9)
     total_reward = 0
-    max_reward = 0
     actions = deque(maxlen=max_actions)
-
-    # 累计通关10次就认为成功，退出程序
-    FINISHED_TIMES = 0
 
     while True:
         curr_step += 1
@@ -48,21 +48,13 @@ def eval(local_model, log_writer, eval_epch):
 
         total_reward += reward
 
-        '''通关时保存模型'''
+        # 通关时保存模型
         if info["flag_get"]:
             print("Finished")
-            paddle.save(local_model.state_dict(),
-                        "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
-
-            # 累计通关10次就认为成功，退出程序
-            FINISHED_TIMES += 1
-            if FINISHED_TIMES > 9:
-                done = True
+            paddle.save(local_model.state_dict(), "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
             pass
         pass
 
-        # aistudio 下无法显示
-        # env.render()
         actions.append(action)
         if curr_step > num_global_steps or actions.count(actions[0]) == actions.maxlen:
             done = True
@@ -80,13 +72,13 @@ def eval(local_model, log_writer, eval_epch):
 def train():
     if os.path.isdir(log_path):
         shutil.rmtree(log_path)
+    pass
 
     os.makedirs(log_path)
 
     if not os.path.isdir(saved_path):
         os.makedirs(saved_path)
-
-    # envs = MultipleEnvironments(world, stage, action_type, num_processes)
+    pass
 
     envs = Environment(world, stage, action_type)
 
@@ -103,7 +95,7 @@ def train():
     curr_episode = 0
     eval_epch = 0
     while True:
-        """定期保存模型"""
+        # 定期保存模型
         if curr_episode % save_interval == 0 and curr_episode > 0:
             paddle.save(model.state_dict(),
                         "{}/mario_{}_{}_{}.pdparams".format(saved_path, world, stage, curr_episode))
@@ -114,7 +106,7 @@ def train():
         states = []
         rewards = []
         dones = []
-        """预热部分"""
+        # 预热部分
         train_reward = 0
         for _ in range(num_local_steps):
             states.append(curr_states)
@@ -181,7 +173,7 @@ def train():
         gae = paddle.to_tensor([0.])
         R = []
 
-        '''PG 优势函数计算过程'''
+        # PG 优势函数计算过程
         for value, reward, done in list(zip(values, rewards, dones))[::-1]:
             gae = gae * gamma * tau
             gae = gae + reward + gamma * next_value.detach() * (1.0 - done) - value.detach()
@@ -235,46 +227,42 @@ def train():
                 optimizer.clear_grad()
                 total_loss.backward()
                 optimizer.step()
+                pass
+            pass
+        pass
+
         print("Episode: {}. Total loss: {}".format(curr_episode, total_loss.numpy().item()))
         model.eval()
         eval_epch = eval(model, log_writer, eval_epch)
         if not str(total_loss.numpy().item()) == "nan":
             log_writer.add_scalar("Total loss", value=total_loss, step=curr_episode)
-
         else:
             continue
+        pass
+    pass
 
-
-'''不需要调整的全局变量'''
-gamma = 0.9  # 奖励的折算因子
-tau = 1.0  # GAE(Generalized Advantage Estimation), 即优势函数的参数
-beta = 0.01  # 交叉熵的系数
-epsilon = 0.2  # 裁剪后的替代目标函数(PPO 提出)的参数
-batch_size = 16
-num_epochs = 10
-num_local_steps = 512
-num_global_steps = int(5e6)
-save_interval = 50  # 定期保存间隔
-max_actions = 512
-log_path = "./log"  # 日志保存路径
-saved_path = "./models"
-
-'''可以调整的全局变量'''
-world = 1  # 世界
-stage = 1  # 关卡
-action_type = "simple"  # 操作模式
-lr = float(1e-4)  # 学习率
 
 if __name__ == "__main__":
-    # 程序运行耗时
-    t_start_all = time.time()
+    # 不需要调整的全局变量
+    gamma = 0.9  # 奖励的折算因子
+    tau = 1.0  # GAE(Generalized Advantage Estimation), 即优势函数的参数
+    beta = 0.01  # 交叉熵的系数
+    epsilon = 0.2  # 裁剪后的替代目标函数(PPO 提出)的参数
+    batch_size = 16
+    num_epochs = 10
+    num_local_steps = 512
+    num_global_steps = int(5e6)
+    save_interval = 50  # 定期保存间隔
+    max_actions = 512
+    log_path = "./log"  # 日志保存路径
+    saved_path = "./models"
+
+    # 可以调整的全局变量
+    world = 1  # 世界
+    stage = 1  # 关卡
+    action_type = "simple"  # 操作模式
+    lr = float(1e-4)  # 学习率
 
     paddle.seed(314)
     print("Proximal Policy Optimization Algorithms (PPO) playing Super Mario Bros")
     train()
-
-    # 程序运行耗时
-    t_stop_all = time.time()
-    # 累计10次通关，总耗时
-    TIME_CONSUMING_ALL = t_stop_all - t_start_all
-    print('TIME_CONSUMING_ALL', str(TIME_CONSUMING_ALL), 'seconds')

@@ -1,3 +1,9 @@
+"""
+项目作者 王子瑞
+文章地址 https://blog.csdn.net/wzduang/article/details/113093206
+项目代码 https://github.com/Wongziseoi/PaddleMario
+"""
+
 from __future__ import print_function
 import gym_super_mario_bros
 from gym.spaces import Box
@@ -16,13 +22,12 @@ class Monitor:
         self.command = ["ffmpeg", "-y", "-f", "rawvideo", "-vcodec", "rawvideo", "-s", "{}X{}".format(width, height),
                         "-pix_fmt", "rgb24", "-r", "60", "-i", "-", "-an", "-vcodec", "mpeg4", saved_path]
         try:
-            '''创建子进程'''
+            # 创建子进程
             self.pipe = sp.Popen(self.command, stdin=sp.PIPE, stderr=sp.PIPE)
         except FileNotFoundError:
             pass
 
-    '''记录'''
-
+    # 记录
     def record(self, image_array):
         self.pipe.stdin.write(image_array.tostring())
 
@@ -111,19 +116,19 @@ def create_train_env(world, stage, actions, output_path=None):
 class MultipleEnvironments:
     def __init__(self, world, stage, action_type, num_envs, output_path=None):
         self.agent_conns, self.env_conns = zip(*[mp.Pipe() for _ in range(num_envs)])
-        '''选择操作模式'''
+        # 选择操作模式
         if action_type == "right":
             actions = RIGHT_ONLY
         elif action_type == "simple":
             actions = SIMPLE_MOVEMENT
         else:
             actions = COMPLEX_MOVEMENT
-        '''创建多环境'''
+        # 创建多环境
         self.envs = [create_train_env(world, stage, actions, output_path=output_path) for _ in range(num_envs)]
         self.num_states = self.envs[0].observation_space.shape[0]
         self.num_actions = len(actions)
 
-        '''创建多进程'''
+        # 创建多进程
         for index in range(num_envs):
             process = mp.Process(target=self.run, args=(index,))
             process.start()
@@ -155,12 +160,3 @@ class Environment:
         self.num_actions = len(actions)
 
         pass
-
-    # def run(self, request, action):
-    #     if request == "step":
-    #         self.env.step(action)
-    #     elif request == "reset":
-    #         self.env.reset()
-    #     else:
-    #         raise NotImplementedError
-    #     pass

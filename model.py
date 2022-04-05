@@ -1,3 +1,9 @@
+"""
+项目作者 王子瑞
+文章地址 https://blog.csdn.net/wzduang/article/details/113093206
+项目代码 https://github.com/Wongziseoi/PaddleMario
+"""
+
 import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
