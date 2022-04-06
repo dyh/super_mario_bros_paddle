@@ -3,8 +3,9 @@
 文章地址 https://blog.csdn.net/wzduang/article/details/113093206
 项目代码 https://github.com/Wongziseoi/PaddleMario
 """
-
+import multiprocessing
 import os
+import time
 
 os.environ['OMP_NUM_THREADS'] = '1'
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -26,6 +27,8 @@ from tqdm import trange
 
 
 def eval(local_model, log_writer, eval_epch):
+    global FINISHED_TIMES
+
     # 选择操作模式
     if action_type == "right":
         actions = RIGHT_ONLY
@@ -50,16 +53,24 @@ def eval(local_model, log_writer, eval_epch):
 
         total_reward += reward
 
+        # 累计通关次数+1
+        FINISHED_TIMES += 1
+
         # 通关时保存模型
         if info["flag_get"]:
             print("Finished")
-            paddle.save(local_model.state_dict(),
-                        "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
+            paddle.save(local_model.state_dict(), "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
+
+            # 累计通关次数+1
+            FINISHED_TIMES += 1
+        pass
 
         # env.render()
         actions.append(action)
         if curr_step > num_global_steps or actions.count(actions[0]) == actions.maxlen:
             done = True
+        pass
+
         if done:
             curr_step = 0
             eval_epch += 1
@@ -67,6 +78,7 @@ def eval(local_model, log_writer, eval_epch):
             log_writer.add_scalar("Eval reward", value=paddle.to_tensor(total_reward), step=eval_epch)
             total_reward = 0
             break
+        pass
         state = paddle.to_tensor(state, dtype="float32")
     return eval_epch
 
@@ -94,10 +106,23 @@ def train():
     curr_episode = 0
     eval_epch = 0
     while True:
+
         # 定期保存模型
         if curr_episode % save_interval == 0 and curr_episode > 0:
             paddle.save(model.state_dict(),
                         "{}/mario_{}_{}_{}.pdparams".format(saved_path, world, stage, curr_episode))
+
+            # 若通关10次，则退出训练
+            if FINISHED_TIMES > 9:
+                print('# 已通关 10 次，正在结束训练进程...')
+                # 结束所有进程
+                envs.IF_RUN_LOOP = False
+                # 停止while
+                break
+                pass
+            pass
+        pass
+
         curr_episode += 1
         old_log_policies = []
         actions = []
@@ -153,6 +178,7 @@ def train():
             rewards.append(reward)
             dones.append(done)
             curr_states = state
+        pass
 
         log_writer.add_scalar("Training Reward", value=paddle.to_tensor(train_reward, dtype="float32"),
                               step=curr_episode)
@@ -172,12 +198,13 @@ def train():
         gae = paddle.to_tensor([0.])
         R = []
 
-        # PG 优势函数计算过程# 
+        # PG 优势函数计算过程
         for value, reward, done in list(zip(values, rewards, dones))[::-1]:
             gae = gae * gamma * tau
             gae = gae + reward + gamma * next_value.detach() * (1.0 - done) - value.detach()
             next_value = value
             R.append(gae + value.detach())
+        pass
 
         R = R[::-1]  # 倒序
         R = paddle.concat(R).detach()
@@ -223,21 +250,32 @@ def train():
                     pass
                 else:
                     continue
+                pass
+
                 optimizer.clear_grad()
                 total_loss.backward()
                 optimizer.step()
+            pass
+        pass
+
         print("Episode: {}. Total loss: {}".format(curr_episode, total_loss.numpy().item()))
         model.eval()
         eval_epch = eval(model, log_writer, eval_epch)
         if not str(total_loss.numpy().item()) == "nan":
             log_writer.add_scalar("Total loss", value=total_loss, step=curr_episode)
-
-            # wandb.log({"loss": total_loss.__float__()})
         else:
             continue
+        pass
+    pass
 
 
 if __name__ == "__main__":
+    # 程序运行耗时
+    t_start_all = time.time()
+
+    # 累计通过次数，达到10次后，提前结束训练
+    FINISHED_TIMES = 0
+
     # 不需要调整的全局变量
     gamma = 0.9  # 奖励的折算因子
     tau = 1.0  # GAE(Generalized Advantage Estimation), 即优势函数的参数
@@ -256,11 +294,19 @@ if __name__ == "__main__":
     world = 1  # 世界
     stage = 1  # 关卡
     action_type = "simple"  # 操作模式
-    # num_processes = 8  # 进程数
-    num_processes = 1  # 进程数
+    num_processes = 8  # 进程数
     lr = float(1e-4)  # 学习率
 
     paddle.seed(314)
     print("Proximal Policy Optimization Algorithms (PPO) playing Super Mario Bros")
     print("Training Processes:{}".format(num_processes))
     train()
+    print('# done!')
+
+    # 程序运行耗时
+    t_stop_all = time.time()
+
+    # 总耗时
+    time_all = t_stop_all - t_start_all
+    print('# 总耗时', str(round(time_all / 60, 2)), '分钟')
+    pass

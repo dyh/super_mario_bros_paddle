@@ -52,7 +52,6 @@ def eval(local_model, log_writer, eval_epch):
         if info["flag_get"]:
             print("Finished")
             paddle.save(local_model.state_dict(), "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
-            pass
         pass
 
         actions.append(action)

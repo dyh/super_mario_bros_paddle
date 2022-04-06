@@ -5,6 +5,9 @@
 """
 
 from __future__ import print_function
+
+import traceback
+
 import gym_super_mario_bros
 from gym.spaces import Box
 from gym import Wrapper
@@ -123,6 +126,11 @@ class MultipleEnvironments:
             actions = SIMPLE_MOVEMENT
         else:
             actions = COMPLEX_MOVEMENT
+        pass
+
+        # 是否运行
+        self.IF_RUN_LOOP = True
+
         # 创建多环境
         self.envs = [create_train_env(world, stage, actions, output_path=output_path) for _ in range(num_envs)]
         self.num_states = self.envs[0].observation_space.shape[0]
@@ -136,14 +144,24 @@ class MultipleEnvironments:
 
     def run(self, index):
         self.agent_conns[index].close()
-        while True:
-            request, action = self.env_conns[index].recv()
-            if request == "step":
-                self.env_conns[index].send(self.envs[index].step(int(action)))
-            elif request == "reset":
-                self.env_conns[index].send(self.envs[index].reset())
-            else:
-                raise NotImplementedError
+
+        try:
+            while self.IF_RUN_LOOP:
+                request, action = self.env_conns[index].recv()
+                if request == "step":
+                    self.env_conns[index].send(self.envs[index].step(int(action)))
+                elif request == "reset":
+                    self.env_conns[index].send(self.envs[index].reset())
+                else:
+                    self.IF_RUN_LOOP = False
+                    raise NotImplementedError
+                pass
+            pass
+        except Exception as ex:
+            print('---- catch error ----')
+            print(traceback.format_exc())
+            print('---- catch error ----')
+        pass
 
 
 class Environment:
