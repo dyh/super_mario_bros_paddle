@@ -53,9 +53,6 @@ def eval(local_model, log_writer, eval_epch):
 
         total_reward += reward
 
-        # 累计通关次数+1
-        FINISHED_TIMES += 1
-
         # 通关时保存模型
         if info["flag_get"]:
             print("Finished")
