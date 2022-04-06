@@ -5,6 +5,7 @@
 """
 import multiprocessing
 import os
+import signal
 import time
 
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -27,8 +28,6 @@ from tqdm import trange
 
 
 def eval(local_model, log_writer, eval_epch):
-    global FINISHED_TIMES
-
     # 选择操作模式
     if action_type == "right":
         actions = RIGHT_ONLY
@@ -58,8 +57,8 @@ def eval(local_model, log_writer, eval_epch):
             print("Finished")
             paddle.save(local_model.state_dict(), "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
 
-            # 累计通关次数+1
-            FINISHED_TIMES += 1
+        # 累计通关次数+1
+        FINISHED_TIMES.value += 1
         pass
 
         # env.render()
@@ -102,22 +101,12 @@ def train():
 
     curr_episode = 0
     eval_epch = 0
-    while True:
 
+    while True:
         # 定期保存模型
         if curr_episode % save_interval == 0 and curr_episode > 0:
             paddle.save(model.state_dict(),
                         "{}/mario_{}_{}_{}.pdparams".format(saved_path, world, stage, curr_episode))
-
-            # 若通关10次，则退出训练
-            if FINISHED_TIMES > 9:
-                print('# 已通关 10 次，正在结束训练进程...')
-                # 结束所有进程
-                envs.IF_RUN_LOOP = False
-                # 停止while
-                break
-                pass
-            pass
         pass
 
         curr_episode += 1
@@ -263,6 +252,24 @@ def train():
         else:
             continue
         pass
+
+        # 若通关10次，则退出训练
+        print(FINISHED_TIMES.value)
+        if FINISHED_TIMES.value > 2000:
+            print('# 已通关 10 次，正在结束...')
+            # 停止while
+            break
+            pass
+        pass
+    pass
+
+    # 结束子进程
+    for item in envs.list_process:
+        try:
+            item.terminate()
+        except Exception as ex:
+            print(str(ex))
+        pass
     pass
 
 
@@ -271,7 +278,7 @@ if __name__ == "__main__":
     t_start_all = time.time()
 
     # 累计通过次数，达到10次后，提前结束训练
-    FINISHED_TIMES = 0
+    FINISHED_TIMES = multiprocessing.Value("i", 0)
 
     # 不需要调整的全局变量
     gamma = 0.9  # 奖励的折算因子
@@ -291,13 +298,15 @@ if __name__ == "__main__":
     world = 1  # 世界
     stage = 1  # 关卡
     action_type = "simple"  # 操作模式
-    num_processes = 8  # 进程数
+    num_processes = 3  # 进程数
     lr = float(1e-4)  # 学习率
 
     paddle.seed(314)
     print("Proximal Policy Optimization Algorithms (PPO) playing Super Mario Bros")
     print("Training Processes:{}".format(num_processes))
+
     train()
+
     print('# done!')
 
     # 程序运行耗时
@@ -306,4 +315,5 @@ if __name__ == "__main__":
     # 总耗时
     time_all = t_stop_all - t_start_all
     print('# 总耗时', str(round(time_all / 60, 2)), '分钟')
+
     pass

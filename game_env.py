@@ -118,6 +118,7 @@ def create_train_env(world, stage, actions, output_path=None):
 
 class MultipleEnvironments:
     def __init__(self, world, stage, action_type, num_envs, output_path=None):
+
         self.agent_conns, self.env_conns = zip(*[mp.Pipe() for _ in range(num_envs)])
         # 选择操作模式
         if action_type == "right":
@@ -128,39 +129,33 @@ class MultipleEnvironments:
             actions = COMPLEX_MOVEMENT
         pass
 
-        # 是否运行
-        self.IF_RUN_LOOP = True
-
         # 创建多环境
         self.envs = [create_train_env(world, stage, actions, output_path=output_path) for _ in range(num_envs)]
         self.num_states = self.envs[0].observation_space.shape[0]
         self.num_actions = len(actions)
+
+        # 进程列表
+        self.list_process = []
 
         # 创建多进程
         for index in range(num_envs):
             process = mp.Process(target=self.run, args=(index,))
             process.start()
             self.env_conns[index].close()
+            self.list_process.append(process)
+        pass
 
     def run(self, index):
         self.agent_conns[index].close()
-
-        try:
-            while self.IF_RUN_LOOP:
-                request, action = self.env_conns[index].recv()
-                if request == "step":
-                    self.env_conns[index].send(self.envs[index].step(int(action)))
-                elif request == "reset":
-                    self.env_conns[index].send(self.envs[index].reset())
-                else:
-                    self.IF_RUN_LOOP = False
-                    raise NotImplementedError
-                pass
+        while True:
+            request, action = self.env_conns[index].recv()
+            if request == "step":
+                self.env_conns[index].send(self.envs[index].step(int(action)))
+            elif request == "reset":
+                self.env_conns[index].send(self.envs[index].reset())
+            else:
+                raise NotImplementedError
             pass
-        except Exception as ex:
-            print('---- catch error ----')
-            print(traceback.format_exc())
-            print('---- catch error ----')
         pass
 
 
