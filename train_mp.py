@@ -54,11 +54,11 @@ def eval(local_model, log_writer, eval_epch):
 
         # 通关时保存模型
         if info["flag_get"]:
-            print("Finished")
+            print("Finished times", str(FINISHED_TIMES.value))
             paddle.save(local_model.state_dict(), "{}/mario_{}_{}.pdparams".format(saved_path, world, stage))
 
-        # 累计通关次数+1
-        FINISHED_TIMES.value += 1
+            # 累计通关次数+1
+            FINISHED_TIMES.value += 1
         pass
 
         # env.render()
@@ -105,8 +105,7 @@ def train():
     while True:
         # 定期保存模型
         if curr_episode % save_interval == 0 and curr_episode > 0:
-            paddle.save(model.state_dict(),
-                        "{}/mario_{}_{}_{}.pdparams".format(saved_path, world, stage, curr_episode))
+            paddle.save(model.state_dict(), "{}/mario_{}_{}_{}.pdparams".format(saved_path, world, stage, curr_episode))
         pass
 
         curr_episode += 1
@@ -130,9 +129,7 @@ def train():
             pass
 
             policy = F.softmax(logits, axis=-1)
-
             old_m = Categorical(policy)
-
             action = old_m.sample([1])
 
             if action.shape == [1, 1]:
@@ -254,8 +251,7 @@ def train():
         pass
 
         # 若通关10次，则退出训练
-        print(FINISHED_TIMES.value)
-        if FINISHED_TIMES.value > 2000:
+        if FINISHED_TIMES.value > 9:
             print('# 已通关 10 次，正在结束...')
             # 停止while
             break
