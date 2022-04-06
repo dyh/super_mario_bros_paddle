@@ -294,7 +294,7 @@ if __name__ == "__main__":
     world = 1  # 世界
     stage = 1  # 关卡
     action_type = "simple"  # 操作模式
-    num_processes = 3  # 进程数
+    num_processes = 8  # 进程数
     lr = float(1e-4)  # 学习率
 
     paddle.seed(314)
