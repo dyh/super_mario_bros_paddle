@@ -301,6 +301,11 @@ if __name__ == "__main__":
     print("Proximal Policy Optimization Algorithms (PPO) playing Super Mario Bros")
     print("Training Processes:{}".format(num_processes))
 
+    print('# world', world)
+    print('# stage', stage)
+    print('# action_type', action_type)
+    print('# lr', lr)
+
     train()
 
     print('# done!')
