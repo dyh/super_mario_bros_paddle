@@ -75,7 +75,7 @@
     > 设置 8 进程，总耗时 54.31 分钟，日志请见 train_log_1_1.txt 文件，大约 Episode: 352 完成第一关的训练
 
     ```
-    python train_mp.py
+    $ python train_mp.py
     ```
 
 9. 运行预测程序
@@ -83,5 +83,5 @@
     > 第一关训练完成的权重文件保存在 ./models/mario_1_1.pdparams
 
     ```
-    python run_eval.py
+    $ python run_eval.py
     ```
