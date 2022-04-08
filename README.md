@@ -8,10 +8,12 @@
 - 文章地址 https://blog.csdn.net/wzduang/article/details/113093206
 - 项目代码 https://github.com/Wongziseoi/PaddleMario
 
-### 视频
 
+## 视频
 
+bilibili
 
+[![bilibili](https://raw.githubusercontent.com/dyh/super_mario_bros_paddle/main/cover.png)](https://space.bilibili.com/326361150/ "bilibili")
 
 
 ## 运行环境
