@@ -13,7 +13,7 @@
 
 bilibili
 
-[![bilibili](https://raw.githubusercontent.com/dyh/super_mario_bros_paddle/main/cover.png)](https://space.bilibili.com/326361150/ "bilibili")
+[![bilibili](https://raw.githubusercontent.com/dyh/super_mario_bros_paddle/main/cover.png)](https://www.bilibili.com/video/BV1LZ4y1278o/ "bilibili")
 
 
 ## 运行环境
