@@ -1,8 +1,8 @@
 # 超级马里奥兄弟 强化学习 54分钟 打通第1关
 
-#### 注意：本项目多进程训练代码 train_mp.py ，只能在 linux 下运行
+### 注意：本项目多进程训练代码 train_mp.py ，只能在 linux 下运行
 
-### 项目信息
+## 项目信息
 
 - 项目作者 王子瑞
 - 文章地址 https://blog.csdn.net/wzduang/article/details/113093206
